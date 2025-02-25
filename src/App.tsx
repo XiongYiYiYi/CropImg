@@ -1,28 +1,71 @@
-import { useState } from 'react';
-import './App.css';
+import React, { useState, useEffect } from "react";
+import "./App.css";
+import { ErrorBoundary } from "@sentry/react";
 
-function App(): JSX.Element {
-  const [count, setCount] = useState<number>(0);
+function App() {
+  const [croppedImage, setCroppedImage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // 组件卸载时清理 URL 对象
+    return () => {
+      if (croppedImage) {
+        URL.revokeObjectURL(croppedImage);
+      }
+    };
+  }, [croppedImage]);
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (!file.type.includes("gif")) {
+        setError("请选择 GIF 格式的文件！");
+        return;
+      }
+      setError(null);
+      // 清理之前的 URL 对象
+      if (croppedImage) {
+        URL.revokeObjectURL(croppedImage);
+      }
+      setCroppedImage(URL.createObjectURL(file));
+    }
+  };
+
+  const clear = () => {
+    if (croppedImage) {
+      URL.revokeObjectURL(croppedImage);
+      setCroppedImage(null);
+    }
+    setError(null);
+  };
 
   return (
-    <>
-      <div>
-        {/* ... existing code ... */}
+    <ErrorBoundary fallback={<div>发生错误了！请刷新页面重试。</div>}>
+      <div className="App">
+        <header className="App-header">
+          <h1>在线GIF裁剪工具</h1>
+        </header>
+        <main>
+          <input
+            type="file"
+            accept=".gif"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+          />
+          <button onClick={() => document.querySelector("input")?.click()}>
+            选择GIF
+          </button>
+          {error && <div className="error-message">{error}</div>}
+          {croppedImage && (
+            <div>
+              <img src={croppedImage} alt="裁剪后的GIF" />
+              <button onClick={clear}>清除</button>
+            </div>
+          )}
+        </main>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </ErrorBoundary>
   );
 }
 
-export default App; 
+export default App;
